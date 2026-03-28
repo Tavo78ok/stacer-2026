@@ -93,3 +93,24 @@ stacer2026/
 ## Licencia
 
 MIT — Úsalo, modifícalo, distribúyelo.
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-58-27" src="https://github.com/user-attachments/assets/3aab13a6-2080-4d3c-963f-3301e0254901" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-58-44" src="https://github.com/user-attachments/assets/e86f3388-24e1-4272-8dc5-0073d62a60ec" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-58-57" src="https://github.com/user-attachments/assets/cecbdc0d-dbba-4f04-96e2-43c56dd7a7c6" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-59-10" src="https://github.com/user-attachments/assets/38a1bd65-efc4-402e-9157-26f3db39bd4d" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-59-23" src="https://github.com/user-attachments/assets/99e46832-be4e-476f-ac9a-601207add40a" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-59-37" src="https://github.com/user-attachments/assets/a0108734-02c5-4919-acf8-1a114586e115" />
+
+
+<img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-59-47" src="https://github.com/user-attachments/assets/e6eaa898-1d42-417e-b2c7-548f6ac39866" />
