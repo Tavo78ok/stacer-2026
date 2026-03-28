@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Stacer 2026
+GenericName=Linux System Optimizer
+Comment=Optimizador y monitor del sistema para Linux
+Exec=stacer2026
+Icon=stacer2026
+Terminal=false
+Categories=System;Settings;
+Keywords=system;optimizer;cleaner;monitor;linux;stacer;
+StartupNotify=true
+StartupWMClass=stacer2026

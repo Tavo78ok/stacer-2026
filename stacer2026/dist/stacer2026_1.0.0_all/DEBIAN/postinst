@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+chmod 644 /usr/lib/stacer2026/stacer2026.py 2>/dev/null || true
+chmod 755 /usr/bin/stacer2026               2>/dev/null || true
+
+if command -v gtk-update-icon-cache &>/dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
+install_psutil() {
+    if python3 -c "import psutil" 2>/dev/null; then return 0; fi
+    echo "Instalando python3-psutil..."
+    if apt-get install -y python3-psutil 2>/dev/null; then return 0; fi
+    if pip3 install psutil --break-system-packages 2>/dev/null; then return 0; fi
+    if pip3 install psutil 2>/dev/null; then return 0; fi
+    echo "AVISO: instala psutil manualmente: pip3 install psutil"
+}
+
+install_pyqt6() {
+    if python3 -c "import PyQt6" 2>/dev/null; then return 0; fi
+    echo "Instalando PyQt6..."
+    if apt-get install -y python3-pyqt6 2>/dev/null; then return 0; fi
+    if pip3 install PyQt6 --break-system-packages 2>/dev/null; then return 0; fi
+    if pip3 install PyQt6 2>/dev/null; then return 0; fi
+    echo "AVISO: instala PyQt6 manualmente: pip3 install PyQt6"
+}
+
+install_psutil
+install_pyqt6
+
+echo "Stacer 2026 instalado correctamente. Ejecuta: stacer2026"

@@ -1,0 +1,14 @@
+Package: stacer2026
+Version: 1.0.0
+Architecture: all
+Maintainer: Andrés Tapia <andres@example.com>
+Depends: python3 (>= 3.10), python3-pyqt6, python3-psutil
+Recommends: pkexec, librsvg2-bin
+Section: utils
+Priority: optional
+Description: Stacer 2026 - Modern Linux System Optimizer
+ Reimaginacion moderna de Stacer construida con PyQt6.
+ Incluye dashboard, limpiador, optimizador, servicios systemd,
+ inicio automatico, desinstalador, monitor de recursos y repositorios.
+ .
+ Datos 100% reales del sistema. Sin simulacion.

@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────
+#  build_deb.sh — Construye el paquete .deb de Stacer 2026
+# ─────────────────────────────────────────────────────────────────
+set -e
+
+APP="stacer2026"
+VERSION="1.0.0"
+ARCH="all"
+PKG="${APP}_${VERSION}_${ARCH}"
+BUILD_DIR="dist/${PKG}"
+
+echo "==> Limpiando build anterior..."
+rm -rf dist/
+mkdir -p "${BUILD_DIR}/DEBIAN"
+mkdir -p "${BUILD_DIR}/usr/bin"
+mkdir -p "${BUILD_DIR}/usr/lib/${APP}"
+mkdir -p "${BUILD_DIR}/usr/share/applications"
+mkdir -p "${BUILD_DIR}/usr/share/pixmaps"
+mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/48x48/apps"
+mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/128x128/apps"
+mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/256x256/apps"
+
+echo "==> Copiando archivos..."
+cp stacer2026.py "${BUILD_DIR}/usr/lib/${APP}/"
+chmod 644 "${BUILD_DIR}/usr/lib/${APP}/stacer2026.py"
+
+# ── Ícono SVG ────────────────────────────────────────────────────
+if [ -f "stacer2026.svg" ]; then
+    cp stacer2026.svg "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps/stacer2026.svg"
+    cp stacer2026.svg "${BUILD_DIR}/usr/share/pixmaps/stacer2026.svg"
+    chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps/stacer2026.svg"
+    chmod 644 "${BUILD_DIR}/usr/share/pixmaps/stacer2026.svg"
+
+    for SIZE in 48 128 256; do
+        if command -v rsvg-convert &>/dev/null; then
+            rsvg-convert -w "${SIZE}" -h "${SIZE}" stacer2026.svg \
+                -o "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
+            chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
+            echo "   PNG ${SIZE}x${SIZE} generado"
+        elif command -v inkscape &>/dev/null; then
+            inkscape --export-type=png \
+                --export-width="${SIZE}" --export-height="${SIZE}" \
+                --export-filename="${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png" \
+                stacer2026.svg 2>/dev/null
+            chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
+            echo "   PNG ${SIZE}x${SIZE} generado (inkscape)"
+        else
+            cp stacer2026.svg \
+                "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.svg" 2>/dev/null || true
+        fi
+    done
+    echo "   Icono SVG instalado correctamente"
+else
+    echo "   AVISO: stacer2026.svg no encontrado, omitiendo icono"
+fi
+
+# Launcher
+cat > "${BUILD_DIR}/usr/bin/stacer2026" << 'EOF'
+#!/bin/bash
+exec python3 /usr/lib/stacer2026/stacer2026.py "$@"
+EOF
+chmod +x "${BUILD_DIR}/usr/bin/stacer2026"
+
+# .desktop
+cat > "${BUILD_DIR}/usr/share/applications/stacer2026.desktop" << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Stacer 2026
+GenericName=Linux System Optimizer
+Comment=Optimizador y monitor del sistema para Linux
+Exec=stacer2026
+Icon=stacer2026
+Terminal=false
+Categories=System;Settings;
+Keywords=system;optimizer;cleaner;monitor;linux;stacer;
+StartupNotify=true
+StartupWMClass=stacer2026
+EOF
+
+# control
+cat > "${BUILD_DIR}/DEBIAN/control" << EOF
+Package: ${APP}
+Version: ${VERSION}
+Architecture: ${ARCH}
+Maintainer: Andrés Tapia <andres@example.com>
+Depends: python3 (>= 3.10), python3-pyqt6, python3-psutil
+Recommends: pkexec, librsvg2-bin
+Section: utils
+Priority: optional
+Description: Stacer 2026 - Modern Linux System Optimizer
+ Reimaginacion moderna de Stacer construida con PyQt6.
+ Incluye dashboard, limpiador, optimizador, servicios systemd,
+ inicio automatico, desinstalador, monitor de recursos y repositorios.
+ .
+ Datos 100% reales del sistema. Sin simulacion.
+EOF
+
+# postinst
+cat > "${BUILD_DIR}/DEBIAN/postinst" << 'EOF'
+#!/bin/bash
+set -e
+
+chmod 644 /usr/lib/stacer2026/stacer2026.py 2>/dev/null || true
+chmod 755 /usr/bin/stacer2026               2>/dev/null || true
+
+if command -v gtk-update-icon-cache &>/dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
+install_psutil() {
+    if python3 -c "import psutil" 2>/dev/null; then return 0; fi
+    echo "Instalando python3-psutil..."
+    if apt-get install -y python3-psutil 2>/dev/null; then return 0; fi
+    if pip3 install psutil --break-system-packages 2>/dev/null; then return 0; fi
+    if pip3 install psutil 2>/dev/null; then return 0; fi
+    echo "AVISO: instala psutil manualmente: pip3 install psutil"
+}
+
+install_pyqt6() {
+    if python3 -c "import PyQt6" 2>/dev/null; then return 0; fi
+    echo "Instalando PyQt6..."
+    if apt-get install -y python3-pyqt6 2>/dev/null; then return 0; fi
+    if pip3 install PyQt6 --break-system-packages 2>/dev/null; then return 0; fi
+    if pip3 install PyQt6 2>/dev/null; then return 0; fi
+    echo "AVISO: instala PyQt6 manualmente: pip3 install PyQt6"
+}
+
+install_psutil
+install_pyqt6
+
+echo "Stacer 2026 instalado correctamente. Ejecuta: stacer2026"
+EOF
+chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
+
+# postrm
+cat > "${BUILD_DIR}/DEBIAN/postrm" << 'EOF'
+#!/bin/bash
+if command -v gtk-update-icon-cache &>/dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+EOF
+chmod 755 "${BUILD_DIR}/DEBIAN/postrm"
+
+echo "==> Construyendo .deb..."
+dpkg-deb --build --root-owner-group "${BUILD_DIR}"
+
+echo ""
+echo "✅  Paquete creado: dist/${PKG}.deb"
+echo "    Instalar con:   sudo dpkg -i dist/${PKG}.deb"
+echo "    O con:          sudo apt install ./dist/${PKG}.deb"
