@@ -3,7 +3,7 @@
 """
 ╔═══════════════════════════════════════════════════════════════╗
 ║        Stacer 2026 — Modern Linux System Optimizer            ║
-║        PyQt6 · Real System Data · No Simulation · v1.0.0     ║
+║        PyQt6/PyQt5 · Real System Data · No Simulation v1.0.0 ║
 ╚═══════════════════════════════════════════════════════════════╝
 """
 
@@ -12,20 +12,73 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QScrollArea, QTableWidget,
-    QTableWidgetItem, QHeaderView, QCheckBox, QLineEdit, QProgressBar,
-    QStackedWidget, QMessageBox, QSizePolicy, QAbstractItemView,
-    QTextEdit, QGridLayout, QButtonGroup
-)
-from PyQt6.QtCore import (
-    Qt, QTimer, QThread, pyqtSignal, QRect, QSize
-)
-from PyQt6.QtGui import (
-    QColor, QFont, QPainter, QPen, QBrush, QPainterPath,
-    QLinearGradient, QPalette, QCursor
-)
+# ── Detección de CPU antes de importar Qt ────────────────────────────────────
+def _cpu_has_pyqt6() -> bool:
+    """Verifica si el CPU tiene SSE4.1/SSE4.2/POPCNT requeridos por PyQt6."""
+    try:
+        flags = open("/proc/cpuinfo").read()
+        required = {"sse4_1", "sse4_2", "popcnt"}
+        present  = set(re.findall(r'\b(sse4_1|sse4_2|popcnt)\b', flags))
+        return required.issubset(present)
+    except Exception:
+        return False
+
+_USE_QT6 = _cpu_has_pyqt6()
+
+if _USE_QT6:
+    try:
+        from PyQt6.QtWidgets import (
+            QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+            QLabel, QPushButton, QFrame, QScrollArea, QTableWidget,
+            QTableWidgetItem, QHeaderView, QCheckBox, QLineEdit, QProgressBar,
+            QStackedWidget, QMessageBox, QSizePolicy, QAbstractItemView,
+            QTextEdit, QGridLayout, QButtonGroup
+        )
+        from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QRect, QSize
+        from PyQt6.QtGui import (
+            QColor, QFont, QPainter, QPen, QBrush, QPainterPath,
+            QLinearGradient, QPalette, QCursor
+        )
+        print("Stacer 2026: usando PyQt6")
+    except ImportError:
+        _USE_QT6 = False
+
+if not _USE_QT6:
+    from PyQt5.QtWidgets import (
+        QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+        QLabel, QPushButton, QFrame, QScrollArea, QTableWidget,
+        QTableWidgetItem, QHeaderView, QCheckBox, QLineEdit, QProgressBar,
+        QStackedWidget, QMessageBox, QSizePolicy, QAbstractItemView,
+        QTextEdit, QGridLayout, QButtonGroup
+    )
+    from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QRect, QSize
+    from PyQt5.QtGui import (
+        QColor, QFont, QPainter, QPen, QBrush, QPainterPath,
+        QLinearGradient, QPalette, QCursor
+    )
+    print("Stacer 2026: usando PyQt5 (CPU legacy)")
+
+# ── Normalización de enums Qt6 → compatibles con Qt5 ─────────────────────────
+if _USE_QT6:
+    Qt.AlignCenter              = Qt.AlignmentFlag.AlignCenter
+    Qt.AlignVCenter             = Qt.AlignmentFlag.AlignVCenter
+    Qt.AlignLeft                = Qt.AlignmentFlag.AlignLeft
+    Qt.AlignRight               = Qt.AlignmentFlag.AlignRight
+    Qt.AlignBottom              = Qt.AlignmentFlag.AlignBottom
+    Qt.PointingHandCursor       = Qt.CursorShape.PointingHandCursor
+    Qt.ScrollBarAlwaysOff       = Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    Qt.Vertical                 = Qt.Orientation.Vertical
+    Qt.NoPen                    = Qt.PenStyle.NoPen
+    Qt.RoundCap                 = Qt.PenCapStyle.RoundCap
+    QFont.Bold                  = QFont.Weight.Bold
+    QPainter.Antialiasing       = QPainter.RenderHint.Antialiasing
+    QFrame.NoFrame              = QFrame.Shape.NoFrame
+    QAbstractItemView.SelectRows     = QAbstractItemView.SelectionBehavior.SelectRows
+    QAbstractItemView.NoEditTriggers = QAbstractItemView.EditTrigger.NoEditTriggers
+    QHeaderView.ResizeToContents     = QHeaderView.ResizeMode.ResizeToContents
+    QHeaderView.Stretch              = QHeaderView.ResizeMode.Stretch
+    QMessageBox.Yes             = QMessageBox.StandardButton.Yes
+    QMessageBox.No              = QMessageBox.StandardButton.No
 
 # ─────────────────────── PALETTE ─────────────────────────────────────────────
 
@@ -313,7 +366,7 @@ class CircleGauge(QWidget):
 
     def paintEvent(self, _event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
 
         w, h  = self.width(), self.height()
         size  = min(w, h) - 28
@@ -324,7 +377,7 @@ class CircleGauge(QWidget):
         # Track
         pen = QPen(QColor(C.BORDER))
         pen.setWidth(11)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setCapStyle(Qt.RoundCap)
         p.setPen(pen)
         p.drawArc(rect, 225 * 16, -270 * 16)
 
@@ -332,7 +385,7 @@ class CircleGauge(QWidget):
         if self._val > 0:
             arc_pen = QPen(self._color)
             arc_pen.setWidth(11)
-            arc_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            arc_pen.setCapStyle(Qt.RoundCap)
             p.setPen(arc_pen)
             p.drawArc(rect, 225 * 16, int(-270 * 16 * self._val / 100))
 
@@ -346,7 +399,7 @@ class CircleGauge(QWidget):
         grad.setColorAt(0, c1)
         grad.setColorAt(1, c2)
         p.setBrush(QBrush(grad))
-        p.setPen(Qt.PenStyle.NoPen)
+        p.setPen(Qt.NoPen)
         p.drawEllipse(cx - rad, cy - rad, rad * 2, rad * 2)
 
         # Percentage text
@@ -355,7 +408,7 @@ class CircleGauge(QWidget):
         vf.setBold(True)
         p.setFont(vf)
         p.setPen(QColor(C.TEXT))
-        p.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{int(self._val)}%")
+        p.drawText(rect, Qt.AlignCenter, f"{int(self._val)}%")
 
         # Label
         lf = QFont("Ubuntu")
@@ -364,7 +417,7 @@ class CircleGauge(QWidget):
         p.setFont(lf)
         p.setPen(self._color)
         p.drawText(QRect(x, y + size + 4, size, 20),
-                   Qt.AlignmentFlag.AlignCenter, self._label)
+                   Qt.AlignCenter, self._label)
 
         # Sub-label
         if self._sub:
@@ -373,7 +426,7 @@ class CircleGauge(QWidget):
             p.setFont(sf)
             p.setPen(QColor(C.DIM))
             p.drawText(QRect(x, y + size + 22, size, 16),
-                       Qt.AlignmentFlag.AlignCenter, self._sub)
+                       Qt.AlignCenter, self._sub)
         p.end()
 
 
@@ -397,7 +450,7 @@ class LiveChart(QWidget):
 
     def paintEvent(self, _event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
 
         w, h   = self.width(), self.height()
         pad    = 10
@@ -473,12 +526,12 @@ class SidebarBtn(QPushButton):
         self._label = label
         self.setCheckable(True)
         self.setFixedHeight(50)
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setCursor(QCursor(Qt.PointingHandCursor))
         self.setFlat(True)
 
     def paintEvent(self, _event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
 
         checked = self.isChecked()
@@ -493,7 +546,7 @@ class SidebarBtn(QPushButton):
 
         # Left accent bar when active
         if checked:
-            p.setPen(Qt.PenStyle.NoPen)
+            p.setPen(Qt.NoPen)
             p.setBrush(QColor(C.ACCENT))
             p.drawRoundedRect(0, 10, 4, h - 20, 2, 2)
 
@@ -502,7 +555,7 @@ class SidebarBtn(QPushButton):
         p.setFont(if_)
         p.setPen(QColor(C.ACCENT if checked else C.DIM))
         p.drawText(QRect(14, 0, 32, h),
-                   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignCenter,
+                   Qt.AlignVCenter | Qt.AlignCenter,
                    self._icon)
 
         # Label
@@ -510,7 +563,7 @@ class SidebarBtn(QPushButton):
         if checked: lf.setBold(True)
         p.setFont(lf)
         p.setPen(QColor(C.TEXT if checked else C.DIM))
-        p.drawText(QRect(50, 0, w - 58, h), Qt.AlignmentFlag.AlignVCenter, self._label)
+        p.drawText(QRect(50, 0, w - 58, h), Qt.AlignVCenter, self._label)
 
         p.end()
 
@@ -527,7 +580,7 @@ class Card(QFrame):
 
 def mk_btn(label: str, color: str = C.ACCENT) -> QPushButton:
     b = QPushButton(label)
-    b.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+    b.setCursor(QCursor(Qt.PointingHandCursor))
     b.setFixedHeight(36)
     b.setFont(QFont("Ubuntu", 10))
     lighter = QColor(color).lighter(125).name()
@@ -565,8 +618,8 @@ class StyledTable(QTableWidget):
         super().__init__(0, cols, parent)
         self.setHorizontalHeaderLabels(headers)
         self.verticalHeader().setVisible(False)
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.horizontalHeader().setStretchLastSection(True)
         self.setAlternatingRowColors(True)
         self.setShowGrid(False)
@@ -593,14 +646,14 @@ class StyledTable(QTableWidget):
 
 def section_title(text: str, color: str = C.TEXT) -> QLabel:
     lbl = QLabel(text)
-    lbl.setFont(QFont("Ubuntu", 18, QFont.Weight.Bold))
+    lbl.setFont(QFont("Ubuntu", 18, QFont.Bold))
     lbl.setStyleSheet(f"color:{color};")
     return lbl
 
 
 def card_title(text: str, color: str = C.ACCENT) -> QLabel:
     lbl = QLabel(text)
-    lbl.setFont(QFont("Ubuntu", 12, QFont.Weight.Bold))
+    lbl.setFont(QFont("Ubuntu", 12, QFont.Bold))
     lbl.setStyleSheet(f"color:{color};")
     return lbl
 
@@ -631,7 +684,7 @@ class DashboardPage(QWidget):
             card = Card()
             cl = QVBoxLayout(card)
             cl.setContentsMargins(10, 14, 10, 14)
-            cl.addWidget(g, alignment=Qt.AlignmentFlag.AlignCenter)
+            cl.addWidget(g, alignment=Qt.AlignCenter)
             gauge_row.addWidget(card, 1)
 
         root.addLayout(gauge_row)
@@ -834,7 +887,7 @@ class CleanerPage(QWidget):
             sz_lbl.setFont(QFont("Ubuntu", 9))
             sz_lbl.setStyleSheet(f"color:{C.AMBER};")
             sz_lbl.setFixedWidth(76)
-            sz_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            sz_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self._size_lbl[tid] = sz_lbl
 
             col = QVBoxLayout()
@@ -953,7 +1006,7 @@ class OptimizerPage(QWidget):
             cl.setContentsMargins(16, 14, 16, 14)
 
             nl = QLabel(name)
-            nl.setFont(QFont("Ubuntu", 11, QFont.Weight.Bold))
+            nl.setFont(QFont("Ubuntu", 11, QFont.Bold))
             nl.setStyleSheet(f"color:{color};")
             cl.addWidget(nl)
 
@@ -1054,10 +1107,10 @@ class ServicesPage(QWidget):
         root.addLayout(top)
 
         self._table = StyledTable(5, ["Nombre", "Estado", "Sub-estado", "Habilitado", "Descripcion"])
-        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         root.addWidget(self._table)
 
         btn_row = QHBoxLayout()
@@ -1154,10 +1207,10 @@ class StartupPage(QWidget):
         root.addWidget(info)
 
         self._table = StyledTable(4, ["Nombre", "Habilitado", "Comando", "Archivo"])
-        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         root.addWidget(self._table)
 
         btn_row = QHBoxLayout()
@@ -1256,8 +1309,8 @@ class UninstallerPage(QWidget):
         root.addLayout(top)
 
         self._table = StyledTable(3, ["Paquete", "Version", "Descripcion"])
-        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         root.addWidget(self._table)
 
         btn_row = QHBoxLayout()
@@ -1309,9 +1362,9 @@ class UninstallerPage(QWidget):
         ans = QMessageBox.question(
             self, "Confirmar desinstalacion",
             f"Desinstalar '{pkg}'?\n\nEsta accion requerira autenticacion.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No
         )
-        if ans == QMessageBox.StandardButton.Yes:
+        if ans == QMessageBox.Yes:
             sh(f"apt-get remove -y '{pkg}'", sudo=True)
             self._load()
 
@@ -1352,7 +1405,7 @@ class ResourcesPage(QWidget):
             cl = QVBoxLayout(card)
             cl.setContentsMargins(10, 10, 10, 10)
             hdr = QLabel(label)
-            hdr.setFont(QFont("Ubuntu", 9, QFont.Weight.Bold))
+            hdr.setFont(QFont("Ubuntu", 9, QFont.Bold))
             hdr.setStyleSheet(f"color:{C.DIM};")
             cl.addWidget(hdr)
             cl.addWidget(chart, 1)
@@ -1369,16 +1422,16 @@ class ResourcesPage(QWidget):
         self._core_bars: list = []
         bars_row = QHBoxLayout()
         bars_row.setSpacing(4)
-        bars_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        bars_row.setAlignment(Qt.AlignLeft)
 
         n = psutil.cpu_count(logical=True) or 4
         for i in range(n):
             col = QVBoxLayout()
             col.setSpacing(2)
-            col.setAlignment(Qt.AlignmentFlag.AlignBottom)
+            col.setAlignment(Qt.AlignBottom)
 
             bar = QProgressBar()
-            bar.setOrientation(Qt.Orientation.Vertical)
+            bar.setOrientation(Qt.Vertical)
             bar.setRange(0, 100)
             bar.setValue(0)
             bar.setFixedWidth(22)
@@ -1391,7 +1444,7 @@ class ResourcesPage(QWidget):
             lbl = QLabel(f"C{i}")
             lbl.setFont(QFont("Ubuntu", 7))
             lbl.setStyleSheet(f"color:{C.DIM};")
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl.setAlignment(Qt.AlignCenter)
 
             col.addWidget(bar)
             col.addWidget(lbl)
@@ -1453,10 +1506,10 @@ class ReposPage(QWidget):
         root.addWidget(info)
 
         self._table = StyledTable(4, ["Estado", "Tipo", "Fuente", "Archivo"])
-        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         root.addWidget(self._table)
 
         btn_row = QHBoxLayout()
@@ -1541,9 +1594,9 @@ class ReposPage(QWidget):
         entry = self._entries[row]
         ans = QMessageBox.question(
             self, "Confirmar", "Eliminar este repositorio?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No
         )
-        if ans == QMessageBox.StandardButton.Yes:
+        if ans == QMessageBox.Yes:
             try:
                 content = Path(entry["file"]).read_text(errors="replace")
                 new = content.replace(entry["raw"] + "\n", "")
@@ -1660,7 +1713,7 @@ class MainWindow(QMainWindow):
         ll = QVBoxLayout(logo_frame)
         ll.setContentsMargins(16, 14, 16, 14)
         top_lbl = QLabel("STACER")
-        top_lbl.setFont(QFont("Ubuntu", 20, QFont.Weight.Bold))
+        top_lbl.setFont(QFont("Ubuntu", 20, QFont.Bold))
         top_lbl.setStyleSheet(f"color:{C.ACCENT}; letter-spacing:4px;")
         sub_lbl = QLabel(f"2026  ·  v{VERSION}  ·  Linux Optimizer")
         sub_lbl.setFont(QFont("Ubuntu", 8))
@@ -1700,7 +1753,7 @@ class MainWindow(QMainWindow):
         ver = QLabel(f"Andrés Tapia  ·  2026")
         ver.setFont(QFont("Ubuntu", 7))
         ver.setStyleSheet(f"color:{C.BORDER};")
-        ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ver.setAlignment(Qt.AlignCenter)
         sb.addWidget(ver)
         sb.addSpacing(10)
 
@@ -1709,8 +1762,8 @@ class MainWindow(QMainWindow):
         # ── Pages ────────────────────────────────────────────────────────────
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setStyleSheet(f"background:{C.BG}; border:none;")
 
         self._stack = QStackedWidget()
@@ -1797,3 +1850,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+ 
+       
