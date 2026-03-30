@@ -1,4 +1,4 @@
-# Stacer 2026
+# Stacer 2.0 System Optimizer
 
 **Reimaginación moderna de Stacer — construida con PyQt6/PyQt5, datos 100% reales del sistema.**
 
