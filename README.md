@@ -1,11 +1,12 @@
 # Stacer 2026
 
-**Reimaginación moderna de Stacer — construida con PyQt6, datos 100% reales del sistema.**
+**Reimaginación moderna de Stacer — construida con PyQt6/PyQt5, datos 100% reales del sistema.**
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![PyQt6](https://img.shields.io/badge/PyQt6-6.4%2B-green)
+![PyQt](https://img.shields.io/badge/PyQt-6%20%7C%205-green)
 ![License](https://img.shields.io/badge/License-MIT-purple)
 ![Platform](https://img.shields.io/badge/Platform-Linux-orange)
+![Arch](https://img.shields.io/badge/Arch-x86__64-lightgrey)
 
 ---
 
@@ -24,36 +25,72 @@
 
 ---
 
+## Compatibilidad Qt — Detección Automática
+
+Stacer 2026 detecta automáticamente qué librería Qt está disponible en tu sistema, **sin necesidad de configurar nada**:
+
+| Librería | CPUs compatibles | Notas |
+|----------|-----------------|-------|
+| **PyQt6** | CPUs modernos (2012+) con SSE4.1 / SSE4.2 / POPCNT | Prioridad 1 |
+| **PyQt5** | CPUs legacy — cualquier x86_64 | Fallback automático |
+
+La lógica de detección al arrancar:
+```
+→ Intenta cargar PyQt6
+    ✓ Disponible y compatible  →  usa PyQt6
+    ✗ Error (CPU legacy / no instalado)  →  cae a PyQt5 automáticamente
+```
+
+No se requiere ningún cambio en el código ni en la configuración. La app simplemente funciona.
+
+---
+
 ## Requisitos
 
 ```
-python3 >= 3.10
-PyQt6   >= 6.4
-psutil  >= 5.9
-pkexec  (para operaciones con sudo — polkit)
+python3     >= 3.10
+psutil      >= 5.9
+PyQt6       >= 6.4   (CPUs modernos)
+  ó
+PyQt5       >= 5.15  (CPUs legacy / fallback)
+
+pkexec      (para operaciones con sudo — polkit)
 ```
 
 ---
 
 ## Instalación rápida
 
-### Desde PyPI
+### Opción A — Directa (sin .deb)
 ```bash
-pip install PyQt6 psutil --break-system-packages
+# CPUs modernos
+sudo apt install python3-pyqt6 python3-psutil
+python3 stacer2026.py
+
+# CPUs legacy (sin SSE4.2)
+sudo apt install python3-pyqt5 python3-psutil
 python3 stacer2026.py
 ```
 
-### Como paquete .deb
+### Opción B — Paquete .deb (recomendado)
 ```bash
+# Opcional: para generar PNGs del ícono
+sudo apt install librsvg2-bin
+
+# Construir
 chmod +x build_deb.sh
 ./build_deb.sh
+
+# Instalar
 sudo apt install ./dist/stacer2026_1.0.0_all.deb
 stacer2026
 ```
 
-### En Debian/Ubuntu/MX Linux/ArgOs Platinum
+> El `postinst` detecta automáticamente cuál Qt instalar en cada máquina.
+
+### En Debian / Ubuntu / LMDE / MX Linux / ArgOs Platinum
 ```bash
-sudo apt install python3-pyqt6 python3-psutil
+sudo apt install python3-pyqt5 python3-psutil   # funciona en cualquier CPU
 python3 stacer2026.py
 ```
 
@@ -63,7 +100,8 @@ python3 stacer2026.py
 
 ```
 stacer2026/
-├── stacer2026.py       # Aplicación principal (único archivo fuente)
+├── stacer2026.py       # Aplicación principal — PyQt6/PyQt5 auto-detect
+├── stacer2026.svg      # Ícono vectorial (512×512)
 ├── requirements.txt    # Dependencias Python
 ├── build_deb.sh        # Script de empaquetado .deb
 └── README.md
@@ -71,28 +109,33 @@ stacer2026/
 
 ---
 
-## Capturas de pantalla (módulos)
+## Notas técnicas
 
-- **Dashboard**: 3 gauges circulares animados con easing suave, cards de sistema, red y disco.
-- **Limpiador**: Escaneo de tamaños antes de limpiar, log en tiempo real del proceso.
-- **Recursos**: 4 gráficas de línea con relleno degradado + barras verticales por núcleo.
-- **Servicios**: Tabla de todos los servicios systemd con color-coding por estado.
+- **PyQt6/PyQt5** — detección automática en runtime, sin flags ni variables de entorno.
+- Todas las gráficas son **QPainter nativo** — sin matplotlib ni pyqtgraph.
+- Workers en **QThread** — la UI nunca se bloquea en operaciones de sistema.
+- Compatibilidad verificada: **Debian 12, Ubuntu 22.04/24.04, LMDE 7, MX Linux KDE, ArgOs Platinum**.
+- Fuentes: Ubuntu → Liberation Sans → DejaVu Sans (fallback chain Linux-compatible).
+- Ícono SVG con gradiente morado→cyan, coherente con el diseño de la app.
 
 ---
 
-## Notas de desarrollo
+## Historial de versiones
 
-- Construido con **PyQt6** puro — sin dependencias de terceros de UI.
-- Todas las gráficas son **QPainter** nativo — sin matplotlib ni pyqtgraph.
-- Workers en **QThread** para todas las operaciones de sistema — UI nunca se bloquea.
-- Compatibilidad verificada con **Debian 12, Ubuntu 22.04/24.04, MX Linux KDE, ArgOs Platinum Edition**.
-- Fuentes: Ubuntu → Liberation Sans → DejaVu Sans (fallback chain Linux-compatible).
+| Versión | Cambios |
+|---------|---------|
+| **1.0.0** | Lanzamiento inicial con PyQt6 |
+| **1.0.1** | Compatibilidad automática PyQt6/PyQt5 — soporte CPU legacy |
 
 ---
 
 ## Licencia
 
 MIT — Úsalo, modifícalo, distribúyelo.
+
+---
+
+*Desarrollado por Andrés Tapia · 2026*
 
 
 <img width="1440" height="900" alt="Captura de pantalla de 2026-03-28 19-58-27" src="https://github.com/user-attachments/assets/3aab13a6-2080-4d3c-963f-3301e0254901" />
