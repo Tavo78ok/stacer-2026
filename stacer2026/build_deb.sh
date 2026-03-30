@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
 #  build_deb.sh — Construye el paquete .deb de Stacer 2026
+#  Compatible con PyQt6 y PyQt5 (detección automática en runtime)
 # ─────────────────────────────────────────────────────────────────
 set -e
 
@@ -32,28 +33,20 @@ if [ -f "stacer2026.svg" ]; then
     cp stacer2026.svg "${BUILD_DIR}/usr/share/pixmaps/stacer2026.svg"
     chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps/stacer2026.svg"
     chmod 644 "${BUILD_DIR}/usr/share/pixmaps/stacer2026.svg"
-
     for SIZE in 48 128 256; do
         if command -v rsvg-convert &>/dev/null; then
             rsvg-convert -w "${SIZE}" -h "${SIZE}" stacer2026.svg \
                 -o "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
             chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
-            echo "   PNG ${SIZE}x${SIZE} generado"
         elif command -v inkscape &>/dev/null; then
             inkscape --export-type=png \
                 --export-width="${SIZE}" --export-height="${SIZE}" \
                 --export-filename="${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png" \
                 stacer2026.svg 2>/dev/null
             chmod 644 "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.png"
-            echo "   PNG ${SIZE}x${SIZE} generado (inkscape)"
-        else
-            cp stacer2026.svg \
-                "${BUILD_DIR}/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/stacer2026.svg" 2>/dev/null || true
         fi
     done
-    echo "   Icono SVG instalado correctamente"
-else
-    echo "   AVISO: stacer2026.svg no encontrado, omitiendo icono"
+    echo "   Icono instalado"
 fi
 
 # Launcher
@@ -80,25 +73,26 @@ StartupNotify=true
 StartupWMClass=stacer2026
 EOF
 
-# control
+# DEBIAN/control  — acepta PyQt6 O PyQt5
 cat > "${BUILD_DIR}/DEBIAN/control" << EOF
 Package: ${APP}
 Version: ${VERSION}
 Architecture: ${ARCH}
 Maintainer: Andrés Tapia <andres@example.com>
-Depends: python3 (>= 3.10), python3-pyqt6, python3-psutil
+Depends: python3 (>= 3.10), python3-psutil
 Recommends: pkexec, librsvg2-bin
 Section: utils
 Priority: optional
 Description: Stacer 2026 - Modern Linux System Optimizer
- Reimaginacion moderna de Stacer construida con PyQt6.
- Incluye dashboard, limpiador, optimizador, servicios systemd,
- inicio automatico, desinstalador, monitor de recursos y repositorios.
+ Reimaginacion moderna de Stacer construida con PyQt6/PyQt5.
+ Detecta automaticamente la libreria Qt disponible en el sistema.
+ Incluye dashboard, limpiador, optimizador, servicios, inicio
+ automatico, desinstalador, monitor de recursos y repositorios.
  .
- Datos 100% reales del sistema. Sin simulacion.
+ Datos 100% reales. Sin simulacion. Compatible con CPU legacy.
 EOF
 
-# postinst
+# postinst — instala la mejor Qt disponible
 cat > "${BUILD_DIR}/DEBIAN/postinst" << 'EOF'
 #!/bin/bash
 set -e
@@ -106,6 +100,7 @@ set -e
 chmod 644 /usr/lib/stacer2026/stacer2026.py 2>/dev/null || true
 chmod 755 /usr/bin/stacer2026               2>/dev/null || true
 
+# Actualizar cache de íconos
 if command -v gtk-update-icon-cache &>/dev/null; then
     gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 fi
@@ -113,28 +108,40 @@ if command -v update-desktop-database &>/dev/null; then
     update-desktop-database /usr/share/applications 2>/dev/null || true
 fi
 
-install_psutil() {
-    if python3 -c "import psutil" 2>/dev/null; then return 0; fi
-    echo "Instalando python3-psutil..."
-    if apt-get install -y python3-psutil 2>/dev/null; then return 0; fi
-    if pip3 install psutil --break-system-packages 2>/dev/null; then return 0; fi
-    if pip3 install psutil 2>/dev/null; then return 0; fi
-    echo "AVISO: instala psutil manualmente: pip3 install psutil"
-}
-
-install_pyqt6() {
-    if python3 -c "import PyQt6" 2>/dev/null; then return 0; fi
+# Instalar Qt: intentar PyQt6 primero, si falla usar PyQt5
+install_qt() {
+    if python3 -c "import PyQt6" 2>/dev/null; then
+        echo "PyQt6 ya disponible."
+        return 0
+    fi
+    if python3 -c "import PyQt5" 2>/dev/null; then
+        echo "PyQt5 ya disponible."
+        return 0
+    fi
     echo "Instalando PyQt6..."
     if apt-get install -y python3-pyqt6 2>/dev/null; then return 0; fi
     if pip3 install PyQt6 --break-system-packages 2>/dev/null; then return 0; fi
-    if pip3 install PyQt6 2>/dev/null; then return 0; fi
-    echo "AVISO: instala PyQt6 manualmente: pip3 install PyQt6"
+    echo "PyQt6 no compatible con este CPU, instalando PyQt5..."
+    if apt-get install -y python3-pyqt5 2>/dev/null; then return 0; fi
+    if pip3 install PyQt5 --break-system-packages 2>/dev/null; then return 0; fi
+    if pip3 install PyQt5 2>/dev/null; then return 0; fi
+    echo "AVISO: Instala manualmente: sudo apt install python3-pyqt5"
 }
 
-install_psutil
-install_pyqt6
+install_psutil() {
+    if python3 -c "import psutil" 2>/dev/null; then return 0; fi
+    echo "Instalando psutil..."
+    if apt-get install -y python3-psutil 2>/dev/null; then return 0; fi
+    if pip3 install psutil --break-system-packages 2>/dev/null; then return 0; fi
+    echo "AVISO: Instala manualmente: sudo apt install python3-psutil"
+}
 
-echo "Stacer 2026 instalado correctamente. Ejecuta: stacer2026"
+install_qt
+install_psutil
+
+echo ""
+echo "Stacer 2026 instalado correctamente."
+echo "Ejecuta: stacer2026"
 EOF
 chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
 
@@ -150,10 +157,16 @@ fi
 EOF
 chmod 755 "${BUILD_DIR}/DEBIAN/postrm"
 
+echo "==> Fijando permisos finales..."
+find "${BUILD_DIR}" -type d -exec chmod 755 {} \;
+find "${BUILD_DIR}" -type f -exec chmod 644 {} \;
+chmod 755 "${BUILD_DIR}/usr/bin/stacer2026"
+chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
+chmod 755 "${BUILD_DIR}/DEBIAN/postrm"
+
 echo "==> Construyendo .deb..."
 dpkg-deb --build --root-owner-group "${BUILD_DIR}"
 
 echo ""
 echo "✅  Paquete creado: dist/${PKG}.deb"
-echo "    Instalar con:   sudo dpkg -i dist/${PKG}.deb"
-echo "    O con:          sudo apt install ./dist/${PKG}.deb"
+echo "    Instalar con:   sudo apt install ./dist/${PKG}.deb"
